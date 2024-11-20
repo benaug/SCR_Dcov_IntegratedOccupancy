@@ -3,7 +3,7 @@ library(coda)
 source("sim.SCR.Dcov.IntegratedOccupancy.R")
 source("NimbleModel SCR Dcov IntegratedOccupancy.R")
 source("NimbleFunctions SCR Dcov IntegratedOccupancy.R")
-source("sSampler Dcov.R")
+source("sSampler Dcov IntegratedOccupancy.R")
 source("mask.check.R")
 
 #If using Nimble version 0.13.1 and you must run this line 
@@ -60,16 +60,6 @@ n.cells <- nrow(dSS)
 n.cells.x <- length(x.vals)
 n.cells.y <- length(y.vals)
 
-#create a density covariate
-# D.cov <- rep(NA,n.cells)
-# for(c in 1:n.cells){
-#   D.cov[c] <-  7*dSS[c,1] - 0.5*dSS[c,1]^2 + 7*dSS[c,2] - 0.5*dSS[c,2]^2
-# }
-# D.cov <- as.numeric(scale(D.cov))
-# 
-# image(x.vals,y.vals,matrix(D.cov,n.cells.x,n.cells.y),main="Covariate Value")
-# points(X,pch=4,cex=0.75,col="lightblue")
-
 #simulate a D.cov, higher cov.pars for large scale cov
 #change seed to get new D.cov. trial and error to create one with good trapping array coverage
 # set.seed(13210) #pretty good one
@@ -112,6 +102,10 @@ data <- sim.SCR.Dcov.IntegratedOccupancy(D.beta0=D.beta0,D.beta1=D.beta1,D.cov=D
 
 points(data$s,pch=16)
 
+#Observed data
+str(data$y1) #n x J1 x K1 SCR data (will be converted to n x J1, summing over 1:K1 occasions)
+str(data$y2) #J2 x K2 USCR data
+
 #function to test for errors in mask set up. 
 mask.check(dSS=data$dSS,cells=data$cells,n.cells=data$n.cells,n.cells.x=data$n.cells.x,
                        n.cells.y=data$n.cells.y,res=data$res,xlim=data$xlim,ylim=data$ylim,
@@ -125,20 +119,21 @@ X1 <- data$X1
 X2 <- data$X2
 X <- rbind(data$X1,data$X2)
 J1 <- nrow(X1)
+#data simulator only simulates full trap operation, specifying that here
 K1D1 <- rep(data$K1,J1)
 J2 <- nrow(X2)
 K1D2 <- rep(data$K2,J2)
 
 #Augment and initialize
 n1 <- data$n1
-y2D <- matrix(0,M,J1)
-y2D[1:n1,] <- apply(data$y1,c(1,2),sum)
+y1.2D <- matrix(0,M,J1)
+y1.2D[1:n1,] <- apply(data$y1,c(1,2),sum)
 xlim <- data$xlim
 ylim <- data$ylim
 s.init<- cbind(runif(M,xlim[1],xlim[2]), runif(M,ylim[1],ylim[2])) #assign random locations
-idx <- which(rowSums(y2D)>0) #switch for those actually caught
+idx <- which(rowSums(y1.2D)>0) #switch for those actually caught
 for(i in idx){
-  trps<- matrix(X[y2D[i,]>0,1:2],ncol=2,byrow=FALSE)
+  trps<- matrix(X[y1.2D[i,]>0,1:2],ncol=2,byrow=FALSE)
   if(nrow(trps)>1){
     s.init[i,]<- c(mean(trps[,1]),mean(trps[,2]))
   }else{
@@ -149,7 +144,7 @@ for(i in idx){
 #sum USCR counts over occasions
 y2 <- rowSums(data$y2)
 
-#If using a habitat mask, move any s's initialized in non-habitat above to closest habitat
+#If using a habitat mask (InSS), move any s's initialized in non-habitat above to closest habitat
 e2dist  <-  function (x, y){
   i <- sort(rep(1:nrow(y), nrow(x)))
   dvec <- sqrt((x[, 1] - y[i, 1])^2 + (x[, 2] - y[i, 2])^2)
@@ -173,8 +168,19 @@ for(i in 1:M){
 image(data$x.vals,data$y.vals,matrix(data$InSS,data$n.cells.x,data$n.cells.y))
 points(s.init,pch=16)
 
+#initialize z's, turning on z for SCR-captured individuals
+z.init <- 1*(rowSums(y1.2D)>0)
+#might need to turn on some z's near USCR detectors.
+#Turn on closest individual to each USCR detector with detections if not already on
+for(j in 1:J2){
+  if(y2[j]>0){
+    dists <- sqrt((X2[j,1]-s.init[,1])^2 + (X2[j,2]-s.init[,2])^2)
+    idx <- which(dists==min(dists,na.rm=TRUE))
+    z.init[idx] <- 1
+  }
+}
 
-z.init <- 1*(rowSums(y2D)>0)
+#specify known z's from SCR-captured individuals
 z.data <- rep(NA,M)
 z.data[1:n1] <- 1
 
@@ -192,7 +198,7 @@ constants <- list(M=M,J1=J1,J2=J2,K1D1=K1D1,K1D2=K1D2,xlim=xlim,ylim=ylim,
 
 #supply data to nimble
 dummy.data <- rep(0,M) #dummy data not used, doesn't really matter what the values are
-Nimdata <- list(y1=y2D,y2=y2,z=z.data,X1=X1,X2=X2,dummy.data=dummy.data,cells=data$cells,InSS=data$InSS)
+Nimdata <- list(y1=y1.2D,y2=y2,z=z.data,X1=X1,X2=X2,dummy.data=dummy.data,cells=data$cells,InSS=data$InSS)
 
 # set parameters to monitor
 parameters <- c('N','lambda.N','p0.SCR','p0.USCR','sigma','D0',"D.beta1")

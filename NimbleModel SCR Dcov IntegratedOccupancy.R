@@ -12,6 +12,7 @@ NimModel <- nimbleCode({
   sigma ~ dunif(0,100)
   #--------------------------------------------------------------
   #Density model
+  #splitting D0 off here removes need to consider s.cell likelihoods in D0 update
   D.intercept <- D0*cellArea
   # D.intercept <- exp(D.beta0)*cellArea
   lambda.cell[1:n.cells] <- InSS[1:n.cells]*exp(D.beta1*D.cov[1:n.cells])
@@ -19,8 +20,7 @@ NimModel <- nimbleCode({
   pi.denom <- sum(lambda.cell[1:n.cells])
   lambda.N <- D.intercept*pi.denom #Expected N
   N ~ dpois(lambda.N) #realized N in state space
-  
-  for(i in 1:M) {
+  for(i in 1:M){
     #dunif() here implies uniform distribution within a grid cell
     #also tells nimble s's are in continuous space, not discrete
     s[i,1] ~  dunif(xlim[1],xlim[2])
@@ -39,7 +39,7 @@ NimModel <- nimbleCode({
   #USCR Observation model, marginalized over individuals
   for(j in 1:J2){
     pd2.j[j] <- 1-(prod(1-pd2[1:M,j]*z[1:M]))
-    y2[j] ~ dbinom(pd2.j[j],K1D2[j])
+    y2[j] ~ dbinom(pd2.j[j],K1D2[j]) #occupancy data
   }
 })
 #custom Metropolis-Hastings update for N/z
