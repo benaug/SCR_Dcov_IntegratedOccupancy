@@ -62,29 +62,29 @@ zSampler <- nimbleFunction(
     calcNodes <- model$getDependencies(c("N","y1","y2","pd1","pd2","pd2.j")) #nodes to copy back to mvSaved
     inds.detected <- control$inds.detected
     z.ups <- control$z.ups
+    J1 <- control$J1
     J2 <- control$J2
     M <- control$M
+    g <- control$g
     #nodes used for update, calcNodes + z nodes
-    y1.nodes <- model$expandNodeNames("y1")
-    y2.nodes <- model$expandNodeNames("y2")
-    pd1.nodes <- model$expandNodeNames("pd1")
-    pd2.nodes <- model$expandNodeNames("pd2")
-    pd2.j.nodes <- model$expandNodeNames("pd2.j")
-    N.node <- model$expandNodeNames("N")
-    z.nodes <- model$expandNodeNames("z")
+    y1.nodes <- model$expandNodeNames(paste("y1[",g,",",1:M,",",1:J1,"]"))
+    y2.nodes <- model$expandNodeNames(paste("y2[",g,",1:",J2,"]"))
+    pd1.nodes <- model$expandNodeNames(paste("pd1[",g,",",1:M,",",1:J1,"]"))
+    pd2.nodes <- model$expandNodeNames(paste("pd2[",g,",",1:M,",",1:J2,"]"))
+    pd2.j.nodes <- model$expandNodeNames(paste("pd2.j[",g,"]"))
+    N.node <- model$expandNodeNames(paste("N[",g,"]"))
+    z.nodes <- model$expandNodeNames(paste("z[",g,",1:",M,"]"))
   },
   run = function() {
-    
     #track these "manually" so computations faster than nimble will do them
-    nondetect.probs.initial <- 1 - model$pd2.j #p(no detect)
-    
+    nondetect.probs.initial <- 1 - model$pd2.j[g,1:J2]  #p(no detect)
     for(up in 1:z.ups){ #how many updates per iteration?
       #propose to add/subtract 1
       updown <- rbinom(1,1,0.5) #p=0.5 is symmetric. If you change this, must account for asymmetric proposal
       reject <- FALSE #we auto reject if you select a detected call
       if(updown==0){#subtract
         #find all z's currently on
-        z.on <- which(model$z==1)
+        z.on <- which(model$z[g,1:M]==1)
         n.z.on <- length(z.on)
         pick <- rcat(1,rep(1/n.z.on,n.z.on)) #select one of these individuals
         pick <- z.on[pick]
@@ -98,16 +98,16 @@ zSampler <- nimbleFunction(
           lp.initial.y2 <- model$getLogProb(y2.nodes)
 
           #propose new N/z
-          model$N[1] <<-  model$N[1] - 1
-          model$z[pick] <<- 0
+          model$N[g] <<-  model$N[g] - 1
+          model$z[g,pick] <<- 0
 
           #turn pd off
           #don't use calculate for pd2.j, compute and insert manually
           model$calculate(pd1.nodes[pick])
-          nondetect.probs.proposed <- nondetect.probs.initial/(1-model$pd2[pick,]) #divide these out before calculate, which sets to 0
+          nondetect.probs.proposed <- nondetect.probs.initial/(1-model$pd2[g,pick,1:J2]) #divide these out before calculate, which sets to 0
           model$calculate(pd2.nodes[pick])
           # model$calculate(pd2.j.nodes)
-          model$pd2.j <<- 1 - nondetect.probs.proposed
+          model$pd2.j[g,1:J2]  <<- 1 - nondetect.probs.proposed
           
           #get proposed logprobs for N and y
           lp.proposed.N <- model$calculate(N.node)
@@ -118,26 +118,26 @@ zSampler <- nimbleFunction(
           log_MH_ratio <- (lp.proposed.N + lp.proposed.y1 + lp.proposed.y2) - (lp.initial.N + lp.initial.y1 + lp.initial.y2)
           accept <- decide(log_MH_ratio)
           if(accept) {
-            mvSaved["N",1][1] <<- model[["N"]]
-            mvSaved["pd1",1][pick,] <<- model[["pd1"]][pick,]
-            mvSaved["pd2",1][pick,] <<- model[["pd2"]][pick,]
-            mvSaved["pd2.j",1][1:J2] <<- model[["pd2.j"]][1:J2]
-            mvSaved["z",1][pick] <<- model[["z"]][pick]
+            mvSaved["N",1][g] <<- model[["N"]][g]
+            mvSaved["pd1",1][g,pick,1:J1] <<- model[["pd1"]][g,pick,1:J1]
+            mvSaved["pd2",1][g,pick,1:J2] <<- model[["pd2"]][g,pick,1:J2]
+            mvSaved["pd2.j",1][g,1:J2] <<- model[["pd2.j"]][g,1:J2]
+            mvSaved["z",1][g,pick] <<- model[["z"]][g,pick]
             nondetect.probs.initial  <- nondetect.probs.proposed
           }else{
-            model[["N"]] <<- mvSaved["N",1][1]
-            model[["pd1"]][pick,] <<- mvSaved["pd1",1][pick,]
-            model[["pd2"]][pick,] <<- mvSaved["pd2",1][pick,]
-            model[["pd2.j"]][1:J2] <<- mvSaved["pd2.j",1][1:J2]
-            model[["z"]][pick] <<- mvSaved["z",1][pick]
+            model[["N"]][g] <<- mvSaved["N",1][g]
+            model[["pd1"]][g,pick,1:J1] <<- mvSaved["pd1",1][g,pick,1:J1]
+            model[["pd2"]][g,pick,1:J2] <<- mvSaved["pd2",1][g,pick,1:J2]
+            model[["pd2.j"]][g,1:J2] <<- mvSaved["pd2.j",1][g,1:J2]
+            model[["z"]][g,pick] <<- mvSaved["z",1][g,pick]
             model$calculate(y1.nodes[pick])
             model$calculate(y2.nodes)
             model$calculate(N.node)
           }
         }
       }else{#add
-        if(model$N[1] < M){ #cannot update if z maxed out. Need to raise M
-          z.off <- which(model$z==0)
+        if(model$N[g] < M){ #cannot update if z maxed out. Need to raise M
+          z.off <- which(model$z[g,1:M]==0)
           n.z.off <- length(z.off)
           pick <- rcat(1,rep(1/n.z.off,n.z.off)) #select one of these individuals
           pick <- z.off[pick]
@@ -148,16 +148,16 @@ zSampler <- nimbleFunction(
           lp.initial.y2 <- model$getLogProb(y2.nodes)
           
           #propose new N/z
-          model$N[1] <<-  model$N[1] + 1
-          model$z[pick] <<- 1
+          model$N[g] <<-  model$N[g] + 1
+          model$z[g,pick] <<- 1
           
-          #turn pd on
+          #turn pd on)
           model$calculate(pd1.nodes[pick])
           model$calculate(pd2.nodes[pick])
           #don't use calculate, compute and insert manually
           # model$calculate(pd2.j.nodes)
-          nondetect.probs.proposed <- nondetect.probs.initial*(1-model$pd2[pick,])
-          model$pd2.j <<- 1 - nondetect.probs.proposed
+          nondetect.probs.proposed <- nondetect.probs.initial*(1-model$pd2[g,pick,1:J2])
+          model$pd2.j[g,1:J2]  <<- 1 - nondetect.probs.proposed
           
           #get proposed logprobs for N and y
           lp.proposed.N <- model$calculate(N.node)
@@ -168,18 +168,18 @@ zSampler <- nimbleFunction(
           log_MH_ratio <- (lp.proposed.N + lp.proposed.y1 + lp.proposed.y2) - (lp.initial.N + lp.initial.y1 + lp.initial.y2)
           accept <- decide(log_MH_ratio)
           if(accept) {
-            mvSaved["N",1][1] <<- model[["N"]]
-            mvSaved["pd1",1][pick,] <<- model[["pd1"]][pick,]
-            mvSaved["pd2",1][pick,] <<- model[["pd2"]][pick,]
-            mvSaved["pd2.j",1][1:J2] <<- model[["pd2.j"]][1:J2]
-            mvSaved["z",1][pick] <<- model[["z"]][pick]
+            mvSaved["N",1][g] <<- model[["N"]][g]
+            mvSaved["pd1",1][g,pick,1:J1] <<- model[["pd1"]][g,pick,1:J1]
+            mvSaved["pd2",1][g,pick,1:J2] <<- model[["pd2"]][g,pick,1:J2]
+            mvSaved["pd2.j",1][g,1:J2] <<- model[["pd2.j"]][g,1:J2]
+            mvSaved["z",1][g,pick] <<- model[["z"]][g,pick]
             nondetect.probs.initial  <- nondetect.probs.proposed
           }else{
-            model[["N"]] <<- mvSaved["N",1][1]
-            model[["pd1"]][pick,] <<- mvSaved["pd1",1][pick,]
-            model[["pd2"]][pick,] <<- mvSaved["pd2",1][pick,]
-            model[["pd2.j"]][1:J2] <<- mvSaved["pd2.j",1][1:J2]
-            model[["z"]][pick] <<- mvSaved["z",1][pick]
+            model[["N"]][g] <<- mvSaved["N",1][g]
+            model[["pd1"]][g,pick,1:J1] <<- mvSaved["pd1",1][g,pick,1:J1]
+            model[["pd2"]][g,pick,1:J2] <<- mvSaved["pd2",1][g,pick,1:J2]
+            model[["pd2.j"]][g,1:J2] <<- mvSaved["pd2.j",1][g,1:J2]
+            model[["z"]][g,pick] <<- mvSaved["z",1][g,pick]
             model$calculate(y1.nodes[pick])
             model$calculate(y2.nodes)
             model$calculate(N.node)
