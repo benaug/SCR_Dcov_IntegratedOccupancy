@@ -1,7 +1,7 @@
 # SCR_Dcov_IntegratedOccupancy
 
 Spatial capture recapture model with spatial density covariates and a second observation model that is occupancy data (unmarked SCR data, too).
-This is a closed population version of the model considered by Sun et al. (2019). 
+This is a closed population version of the model considered by Sun et al. (2019). There is a single and multisession version.
 
 https://esajournals.onlinelibrary.wiley.com/doi/full/10.1002/ecy.2777
 
@@ -19,4 +19,3 @@ For baited cameras, trap-level occupancy data can be used, but not trap by occas
 I.e., did a trap detect anything or not over all occasions.
 Also, it is assumed that SCR and occupancy detectors are not co-located where the same individual may be detected by both methods on the same site visit.
 
-Will post multisession versions when I get around to it.
