@@ -31,9 +31,10 @@ NimModel <- nimbleCode({
     #also disallowing s's in non-habitat
     dummy.data[i] ~ dCell(pi.cell[s.cell[i]],InSS=InSS[s.cell[i]])
     #SCR Observation model, skipping z_i=0 calculations
+    #SCR i x j detection probabilities
     pd1[i,1:J1] <- GetDetectionProb(s = s[i,1:2], X = X1[1:J1,1:2], J=J1,sigma=sigma, p0=p0.SCR, z=z[i])
     y1[i,1:J1] ~ dBinomialVector(pd=pd1[i,1:J1],K1D1[1:J1],z=z[i]) #vectorized obs mod
-    #USCR i x j expected detections, skipping z_i=0 calculations
+    #USCR i x j detection probabilities, skipping z_i=0 calculations
     pd2[i,1:J2] <- GetDetectionProb(s = s[i,1:2], X = X2[1:J2,1:2], J=J2,sigma=sigma, p0=p0.USCR, z=z[i])
   }
   #USCR Observation model, marginalized over individuals
