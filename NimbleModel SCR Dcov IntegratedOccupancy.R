@@ -37,10 +37,10 @@ NimModel <- nimbleCode({
     #USCR i x j detection probabilities, skipping z_i=0 calculations
     pd2[i,1:J2] <- GetDetectionProb(s = s[i,1:2], X = X2[1:J2,1:2], J=J2,sigma=sigma, p0=p0.USCR, z=z[i])
   }
-  #USCR Observation model, marginalized over individuals
-  for(j in 1:J2){
-    pd2.j[j] <- 1-(prod(1-pd2[1:M,j]*z[1:M]))
-    y2[j] ~ dbinom(pd2.j[j],K1D2[j]) #occupancy data
-  }
+  #USCR Ramsey et al. Observation model, marginalized over individuals
+  # pd2.j[1:J2] <- 1-(prod(1-pd2[1:M,1:J2]*z[1:M]))
+  #this speeds up p0.USCR/sigma updates somewhat by skipping z=0 inds
+  pd2.j[1:J2] <- Getpd2.j(pd2[1:M,1:J2],z[1:M])
+  y2[1:J2] ~ dBinomialVector(pd2.j[1:J2],K1D2[1:J2],z=1) #occupancy data, set z=1 to reuse dBinomialVector
 })
 #custom Metropolis-Hastings update for N/z

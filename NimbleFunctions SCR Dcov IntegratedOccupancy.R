@@ -19,6 +19,22 @@ rCell <- nimbleFunction(
   }
 )
 
+Getpd2.j <- nimbleFunction(
+  run = function(pd2 = double(2), z = double(1)){
+    returnType(double(1))
+    M <- nimDim(pd2)[1]
+    J <- nimDim(pd2)[2]
+    tmp <- rep(1,J)
+    for(i in 1:M){
+      if(z[i]==1){
+        tmp <- tmp*(1-pd2[i,])
+      }
+    }
+    pd2.j <- 1 - tmp
+    return(pd2.j)
+  }
+)
+
 GetDetectionProb <- nimbleFunction(
   run = function(s = double(1), p0=double(0), sigma=double(0), 
                  X=double(2), J=double(0), z=double(0)){ 

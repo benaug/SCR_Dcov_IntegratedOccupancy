@@ -267,10 +267,8 @@ lambda.cell.idx <- grep("lambda.cell",colnames(mvSamples2))
 D0.idx <- grep("D0",colnames(mvSamples2))
 burnin2 <- 10
 
-
 #compare expected D plot to truth
-#image will show 
-#posterior means
+#image will show posterior means
 lambda.cell.post <- cellArea*mvSamples2[burnin2:nrow(mvSamples2),D0.idx]*mvSamples2[burnin2:nrow(mvSamples2),lambda.cell.idx]
 lambda.cell.ests <- colMeans(lambda.cell.post)
 #remove non-habitat

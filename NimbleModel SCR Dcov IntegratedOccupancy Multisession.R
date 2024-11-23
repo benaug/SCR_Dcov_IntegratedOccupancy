@@ -39,13 +39,11 @@ NimModel <- nimbleCode({
       #USCR i x j detection probabilities, skipping z_i=0 calculations
       pd2[g,i,1:J2[g]] <- GetDetectionProb(s = s[g,i,1:2], X = X2[g,1:J2[g],1:2], J=J2[g],sigma=sigma[g], p0=p0.USCR[g], z=z[g,i])
     }
-    #USCR Observation model, marginalized
-    #slower than below. might be faster with more traps or occasion dimension
-    # pd2.j[1:J2] <- GetTrapProbs(pd2=pd2[1:M,1:J2],z=z[1:M]) #skips z=0 individuals.
-    for(j in 1:J2[g]){
-      pd2.j[g,j] <- 1-(prod(1-pd2[g,1:M[g],j]*z[g,1:M[g]]))
-      y2[g,j] ~ dbinom(pd2.j[g,j],K1D2[g,j])
-    }
+    #USCR Ramsey et al. Observation model, marginalized over individuals
+    # pd2.j[g,1:J2] <- 1-(prod(1-pd2[g,1:M[g],1:J2[g]]*z[1:M[g]]))
+    #this speeds up p0.USCR/sigma updates somewhat by skipping z=0 inds
+    pd2.j[g,1:J2[g]] <- Getpd2.j(pd2[g,1:M[g],1:J2[g]],z[g,1:M[g]])
+    y2[g,1:J2[g]] ~ dBinomialVector(pd2.j[g,1:J2[g]],K1D2[g,1:J2[g]],z=1) #occupancy data, set z=1 to reuse dBinomialVector
   }
 })
 #custom Metropolis-Hastings update for N/z
