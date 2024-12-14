@@ -209,7 +209,7 @@ nt2 <- 5 #thinning rate for parameters2
 # Build the model, configure the mcmc, and compile
 start.time <- Sys.time()
 Rmodel <- nimbleModel(code=NimModel, constants=constants, data=Nimdata,check=FALSE,inits=Niminits)
-config.nodes <- c('p0.SCR','p0.USCR','sigma','D0',"D.beta1")
+config.nodes <- c('p0.SCR','p0.USCR','sigma') #'D0',"D.beta1" use block sampler below
 # config.nodes <- c()
 conf <- configureMCMC(Rmodel,monitors=parameters, thin=nt,monitors2=parameters2,thin2=nt2,nodes=config.nodes,
                       useConjugacy=FALSE) #configure very slow if checking for conjugacy
