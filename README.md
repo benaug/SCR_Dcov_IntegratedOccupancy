@@ -19,3 +19,4 @@ For baited cameras, trap-level occupancy data can be used, but not trap by occas
 I.e., did a trap detect anything or not over all occasions.
 Also, it is assumed that SCR and occupancy detectors are not co-located where the same individual may be detected by both methods on the same site visit.
 
+These models use count prior data augmentation: https://github.com/benaug/SCR-Count-Prior-Data-Augmentation
