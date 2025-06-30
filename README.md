@@ -14,9 +14,17 @@ To speed up computation, I use the approach of Herliansyah et al. (2024) in the 
 
 https://link.springer.com/article/10.1007/s13253-023-00598-3
 
+These models use count prior data augmentation: https://github.com/benaug/SCR-Count-Prior-Data-Augmentation
+
 This model assumes occupancy data comes from same closed population as SCR data and detectors are not baited. 
 For baited cameras, trap-level occupancy data can be used, but not trap by occasion occupancy data. 
 I.e., did a trap detect anything or not over all occasions.
 Also, it is assumed that SCR and occupancy detectors are not co-located where the same individual may be detected by both methods on the same site visit.
 
-These models use count prior data augmentation: https://github.com/benaug/SCR-Count-Prior-Data-Augmentation
+Analogous repositories for different combinations of marked and unmarked data types can be found here:
+
+Unmarked SCR: https://github.com/benaug/Unmarked-SCR-Marginal
+
+SCR with random thinning: https://github.com/benaug/Random-Thin-Marginal
+
+Spatial mark-resight: https://github.com/benaug/Spatial-Mark-Resight-Marginal
