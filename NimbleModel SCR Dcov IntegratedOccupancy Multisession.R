@@ -31,7 +31,7 @@ NimModel <- nimbleCode({
       s.cell[g,i] <- cells[g,trunc(s[g,i,1]/res[g])+1,trunc(s[g,i,2]/res[g])+1]
       #categorical likelihood for this cell, equivalent to zero's trick
       #also disallowing s's in non-habitat
-      dummy.data[g,i] ~ dCell(pi.cell[g,s.cell[g,i]],InSS=InSS[g,s.cell[g,i]])
+      dummy.data[g,i] ~ dCell(pi.cell[g,s.cell[g,i]])
       #SCR Observation model, skipping z_g,i=0 calculations
       #SCR i x j detection probabilities
       pd1[g,i,1:J1[g]] <- GetDetectionProb(s = s[g,i,1:2], X = X1[g,1:J1[g],1:2], J=J1[g],sigma=sigma[g], p0=p0.SCR[g], z=z[g,i])
